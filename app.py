@@ -200,7 +200,74 @@ def delete_product(id):
     return {"message": "resource is delete"}, 200
 # ========================= END PRODUCT API ======================
 
+# ========================= BEGIN INVOICE API ======================
+@app.route('/invoice/list')
+def get_invoice():
+    invoice = Invoice.query.all()
+    result = [{"id": i.id, "invoice_detail_id": i.invoice_detail_id, "order_id": i.order_id} for i in invoice]
+    return {"invoice": result}, 200
+@app.post('/invoice/create')
+def create_invoice():
+    req = request.json
+    order_id = req['order_id']
+    invoice_detail_id = req['invoice_detail_id']
+    sqlquery = text("INSERT INTO invoice (order_id, invoice_detail_id) VALUES (:order_id, :invoice_detail_id)")
+    db.session.execute(sqlquery, {"order_id": order_id, "invoice_detail_id": invoice_detail_id})
+    db.session.commit()
+    return {"message": "resource is created"}, 200
 
+@app.put('/invoice/<int:id>/update')
+def update_invoice(id):
+    invoice = Invoice.query.get(id)
+    req = request.json
+    order_id = req.get("order_id")
+    invoice_detail_id = req.get("invoice_detail_id")
+    sqlquery = text("UPDATE invoice SET order_id = :order_id, invoice_detail_id = :invoice_detail_id WHERE id = :id")
+    db.session.execute(sqlquery, {"order_id": order_id, "invoice_detail_id": invoice_detail_id, "id": id})
+    db.session.commit()
+    return {"message": "resource is created"}, 200
+
+@app.delete('/invoice/<int:id>/delete')
+def delete_invoice(id):
+    sqlquery = text("DELETE FROM invoice WHERE id = :id")
+    db.session.execute(sqlquery, {"id": id})
+    db.session.commit()
+    return {"message": "resource is delete"}, 200
+# ========================= END INVOICE API ======================
+# ========================= BEGIN INVOICEDETAIL API ======================
+@app.route('/invoicedetail/list')
+def get_invoicedetail():
+    invoice_detail = InvoiceDetail.query.all()
+    result = [{"id": i.id, "orderitem_id": i.orderitem_id} for i in invoice_detail]
+    return {"invoice_detail": result}, 200
+@app.post('/invoicedetail/create')
+def create_invoicedetail():
+    req = request.json
+    orderitem_id = req['orderitem_id']
+    # invoice_detail_id = req['invoice_detail_id']
+    sqlquery = text("INSERT INTO invoice_detail (orderitem_id) VALUES (:orderitem_id)")
+    db.session.execute(sqlquery, {"orderitem_id": orderitem_id})
+    db.session.commit()
+    return {"message": "resource is created"}, 200
+
+@app.put('/invoicedetail/<int:id>/update')
+def update_invoicedetail(id):
+    invoice_detail = InvoiceDetail.query.get(id)
+    req = request.json
+    orderitem_id = req.get("orderitem_id")
+    # invoice_detail_id = req.get("invoice_detail_id")
+    sqlquery = text("UPDATE invoice_detail SET orderitem_id = :orderitem_id WHERE id = :id")
+    db.session.execute(sqlquery, {"orderitem_id": orderitem_id, "id": id})
+    db.session.commit()
+    return {"message": "resource is created"}, 200
+
+@app.delete('/invoicedetail/<int:id>/delete')
+def delete_invoicedetail(id):
+    sqlquery = text("DELETE FROM invoice_detail WHERE id = :id")
+    db.session.execute(sqlquery, {"id": id})
+    db.session.commit()
+    return {"message": "resource is delete"}, 200
+# ========================= END INVOICEDETAIL API ======================
 
 if __name__ == '__main__':
     app.run()
