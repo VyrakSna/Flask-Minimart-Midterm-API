@@ -143,6 +143,8 @@ def delete_category(id):
 @app.get('/product/list')
 def get_product():
     product = Product.query.all()
+    if not product:
+        return {"message": "no user"}, 404
     list_product = [{"name": p.name, "image": p.image, "cost": p.cost, "price": p.price, "category_id": p.category_id, "stock": p.stock, "description": p.description} for p in product]
     return {"product": list_product}, 200
 @app.post('/product/create')
