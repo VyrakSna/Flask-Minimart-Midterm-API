@@ -1,11 +1,10 @@
 import re
-from tokenize import String
-
 from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text, false
 from flask_migrate import Migrate
 from werkzeug.utils import secure_filename
+from datetime import datetime
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 db = SQLAlchemy(app)
@@ -60,20 +59,20 @@ def getinvoicedetail(param):
             } if orderitem else None
         }
     return data
-# def getorder(param):
-#     order = Order.query.get(param)
-#     if order is None:
-#         return None
-#
-#     data = {
-#         "Order_id": order.id,
-#         "user_id": order.user_id,
-#         "customer_id": order.customer_id,
-#         "date_time": order.date_time.isoformat() if order.date_time else None,
-#         "status": order.status
-#
-#     }
-#     return jsonify(data)
+def getorder(param):
+    order = Order.query.get(param)
+    if order is None:
+        return None
+
+    data = {
+        "Order_id": order.id,
+        "user_id": order.user_id,
+        "customer_id": order.customer_id,
+        "date_time": order.date_time.isoformat(),
+        "status": order.status
+
+    }
+    return data
 # ========================= BEGIN USER API ==========================
 @app.route('/user/list')
 def show_user():
@@ -313,6 +312,119 @@ def delete_invoicedetail(id):
     return {"message": "resource is delete"}, 200
 # ========================= END INVOICEDETAIL API ======================
 # ========================= BEGIN SALE REPORT API ======================
+# ====== Daily =========
+@app.route('/reports/sales/daily', methods=['GET'])
+def daily_sales_report():
+    day = request.args.get('day', type=int)
+    month = request.args.get('month', type=int)
+    year = request.args.get('year', type=int)
+    result = Order.query.all()
+    filtered_result = []
+    for r in result:
+        if r.date_time:
+
+                parts = r.date_time.split('-')
+                order_day = int(parts[0])
+                order_month = int(parts[1])
+                order_year = int(parts[2])
+
+                # Check if matches the requested date
+                match = True
+                if day and order_day != day:
+                    match = False
+                if month and order_month != month:
+                    match = False
+                if year and order_year != year:
+                    match = False
+
+                if match:
+                    filtered_result.append({
+                        "id": r.id,
+                        "user_id": r.user_id,
+                        "customer_id": r.customer_id,
+                        "date_time": r.date_time,
+                        "status": r.status
+                    })
+    return jsonify({"daily_sales": filtered_result}), 200
+# ====== Weekly ========
+@app.route('/reports/sales/weekly', methods=['GET'])
+def weekly_sales_report():
+    week = request.args.get('week', type=int)
+    year = request.args.get('year', type=int)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    result = Order.query.all()
+    filtered_result = []
+
+    for r in result:
+        if r.date_time:
+                parts = r.date_time.split('-')
+                order_day = int(parts[0])
+                order_month = int(parts[1])
+                order_year = int(parts[2])
+                order_date = datetime(order_year, order_month, order_day)
+
+                match = False
+
+                if week and year:
+                    order_week = order_date.isocalendar()[1]
+                    if order_week == week and order_year == year:
+                        match = True
+
+                elif start_date and end_date:
+                    start_parts = start_date.split('-')
+                    end_parts = end_date.split('-')
+
+                    start_dt = datetime(int(start_parts[2]), int(start_parts[1]), int(start_parts[0]))
+                    end_dt = datetime(int(end_parts[2]), int(end_parts[1]), int(end_parts[0]))
+
+                    if start_dt <= order_date <= end_dt:
+                        match = True
+
+                elif not week and not year and not start_date and not end_date:
+                    match = True
+
+                if match:
+                    filtered_result.append({
+                        "id": r.id,
+                        "user_id": r.user_id,
+                        "customer_id": r.customer_id,
+                        "date_time": r.date_time,
+                        "status": r.status
+                    })
+
+
+    return jsonify({"weekly_sales": filtered_result}), 200
+# ====== Monthly =======
+@app.route('/reports/sales/monthly', methods=['GET'])
+def monthly_sales_report():
+    month = request.args.get('month', type=int)
+    year = request.args.get('year', type=int)
+
+    result = Order.query.all()
+
+    filtered_result = []
+    for r in result:
+        if r.date_time:
+                parts = r.date_time.split('-')
+                day = int(parts[0])
+                order_month = int(parts[1])
+                order_year = int(parts[2])
+                match = True
+                if month and order_month != month:
+                    match = False
+                if year and order_year != year:
+                    match = False
+                if match:
+                    filtered_result.append({
+                        "id": r.id,
+                        "user_id": r.user_id,
+                        "customer_id": r.customer_id,
+                        "date_time": r.date_time,
+                        "status": r.status
+                    })
+    return jsonify({"monthly_sales": filtered_result}), 200
+
 
 # ========================= END SALE REPORT API ======================
 if __name__ == '__main__':
