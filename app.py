@@ -268,7 +268,7 @@ def update_invoice(id):
     sqlquery = text("UPDATE invoice SET order_id = :order_id, invoice_detail_id = :invoice_detail_id WHERE id = :id")
     db.session.execute(sqlquery, {"order_id": order_id, "invoice_detail_id": invoice_detail_id, "id": id})
     db.session.commit()
-    return {"message": "resource is created"}, 200
+    return {"message": "resource is updated"}, 200
 
 @app.delete('/invoice/<int:id>/delete')
 def delete_invoice(id):
@@ -300,7 +300,7 @@ def update_invoicedetail(id):
     sqlquery = text("UPDATE invoice_detail SET orderitem_id = :orderitem_id WHERE id = :id")
     db.session.execute(sqlquery, {"orderitem_id": orderitem_id, "id": id})
     db.session.commit()
-    return {"message": "resource is created"}, 200
+    return {"message": "resource is updated"}, 200
 
 @app.delete('/invoicedetail/<int:id>/delete')
 def delete_invoicedetail(id):
@@ -422,6 +422,161 @@ def monthly_sales_report():
                         "status": r.status
                     })
     return jsonify({"monthly_sales": filtered_result}), 200
+
+
+# ============ SALES REPORT BY PRODUCT ============
+@app.route('/reports/sales/by-product', methods=['GET'])
+def sales_by_product():
+    product_id = request.args.get('product_id', type=int)
+    start_date = request.args.get('start_date')  # Format: 23-05-2004
+    end_date = request.args.get('end_date')
+
+    if not product_id:
+        return jsonify({"error": "product_id is required"}), 400
+
+    orders = Order.query.all()
+    filtered_sales = []
+    orderitem = OrderItem.query.all()
+    for order in orders:
+        if start_date and end_date and order.date_time:
+                parts = order.date_time.split('-')
+                order_date = datetime(int(parts[2]), int(parts[1]), int(parts[0]))
+
+                start_parts = start_date.split('-')
+                end_parts = end_date.split('-')
+                start_dt = datetime(int(start_parts[2]), int(start_parts[1]), int(start_parts[0]))
+                end_dt = datetime(int(end_parts[2]), int(end_parts[1]), int(end_parts[0]))
+
+                if not (start_dt <= order_date <= end_dt):
+                    continue
+
+        for item in orderitem:
+            if item.product_id == product_id:
+                filtered_sales.append({
+                    "order_id": order.id,
+                    "user_id": order.user_id,
+                    "customer_id": order.customer_id,
+                    "date_time": order.date_time,
+                    "status": order.status,
+                    "product_id": item.product_id,
+                    "quantity": item.qty,
+                    "price": item.price
+                })
+                break
+
+    return jsonify({
+        "product_id": product_id,
+        "total_orders": len(filtered_sales),
+        "sales": filtered_sales
+    }), 200
+
+
+# ============ SALES REPORT BY CATEGORY ============
+@app.route('/reports/sales/by-category', methods=['GET'])
+def sales_by_category():
+    category_id = request.args.get('category_id', type=int)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    if not category_id:
+        return jsonify({"error": "category_id is required"}), 400
+
+
+    products = Product.query.filter_by(category_id=category_id).all()
+    product_ids = [p.id for p in products]
+
+    if not product_ids:
+        return jsonify({
+            "category_id": category_id,
+            "total_orders": 0,
+            "sales": []
+        }), 200
+
+    orders = Order.query.all()
+    orderitems =OrderItem.query.all()
+    filtered_sales = []
+
+    for order in orders:
+
+        if start_date and end_date and order.date_time:
+
+                parts = order.date_time.split('-')
+                order_date = datetime(int(parts[2]), int(parts[1]), int(parts[0]))
+
+                start_parts = start_date.split('-')
+                end_parts = end_date.split('-')
+                start_dt = datetime(int(start_parts[2]), int(start_parts[1]), int(start_parts[0]))
+                end_dt = datetime(int(end_parts[2]), int(end_parts[1]), int(end_parts[0]))
+
+                if not (start_dt <= order_date <= end_dt):
+                    continue
+
+        order_items = []
+        for item in orderitems:
+            if item.product_id in product_ids:
+                order_items.append({
+                    "product_id": item.product_id,
+                    "quantity": item.qty,
+                    "price": item.price
+                })
+
+        if order_items:
+            filtered_sales.append({
+                "order_id": order.id,
+                "user_id": order.user_id,
+                "customer_id": order.customer_id,
+                "date_time": order.date_time,
+                "status": order.status,
+                "items": order_items
+            })
+
+    return jsonify({
+        "category_id": category_id,
+        "total_orders": len(filtered_sales),
+        "sales": filtered_sales
+    }), 200
+
+
+# ============ SALES REPORT BY USER ============
+@app.route('/reports/sales/by-user', methods=['GET'])
+def sales_by_user():
+    user_id = request.args.get('user_id', type=int)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    if not user_id:
+        return jsonify({"error": "user_id is required"}), 400
+
+    query = Order.query.filter_by(user_id=user_id)
+    orders = query.all()
+
+    filtered_sales = []
+
+    for order in orders:
+        if start_date and end_date and order.date_time:
+                parts = order.date_time.split('-')
+                order_date = datetime(int(parts[2]), int(parts[1]), int(parts[0]))
+
+                start_parts = start_date.split('-')
+                end_parts = end_date.split('-')
+                start_dt = datetime(int(start_parts[2]), int(start_parts[1]), int(start_parts[0]))
+                end_dt = datetime(int(end_parts[2]), int(end_parts[1]), int(end_parts[0]))
+
+                if not (start_dt <= order_date <= end_dt):
+                    continue
+
+        filtered_sales.append({
+            "order_id": order.id,
+            "customer_id": order.customer_id,
+            "date_time": order.date_time,
+            "status": order.status
+        })
+
+    return jsonify({
+        "user_id": user_id,
+        "total_orders": len(filtered_sales),
+        "sales": filtered_sales
+    }), 200
 
 
 # ========================= END SALE REPORT API ======================
