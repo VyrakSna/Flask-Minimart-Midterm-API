@@ -31,7 +31,6 @@ def getallinvoicedetail():
         # assert False, orderitem
         data = {
             "id": i.id,
-            "orderitem_id": i.orderitem_id,
             "orderitem": {
                 "id": orderitem.id,
                 "order_id": orderitem.order_id,
@@ -48,7 +47,6 @@ def getinvoicedetail(param):
     orderitem = OrderItem.query.get(param)
     data = {
             "id": i.id,
-            "orderitem_id": i.orderitem_id,
             "orderitem": {
                 "id": orderitem.id,
                 "order_id": orderitem.order_id,
@@ -68,7 +66,7 @@ def getorder(param):
         "Order_id": order.id,
         "user_id": order.user_id,
         "customer_id": order.customer_id,
-        "date_time": order.date_time.isoformat(),
+        "date_time": order.date_time,
         "status": order.status
 
     }
@@ -250,7 +248,7 @@ def get_invoice():
     invoice = Invoice.query.all()
     if not invoice:
         return {"message": "no invoice"}, 404
-    result = [{"id": i.id, "invoice_detail_id": getinvoicedetail(i.invoice_detail_id), "order_id": i.order_id} for i in invoice]
+    result = [{"id": i.id, "invoice_detail_id": getinvoicedetail(i.invoice_detail_id), "order": getorder(i.order_id)} for i in invoice]
     return {"invoice": result}, 200
 @app.post('/invoice/create')
 def create_invoice():
