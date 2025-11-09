@@ -232,7 +232,7 @@ def update_product(id):
     sqlquery = text("UPDATE product SET name = :name, image = :image, cost = :cost, price = :price, stock = :stock, description = :description, category_id = :category_id WHERE id = :id")
     db.session.execute(sqlquery, {"name": name, "image": file_name, "category_id": category_id, "cost": cost, "price": price, "stock": stock, "description": description, "id": id})
     db.session.commit()
-    return {"message": "resource is created"}, 200
+    return {"message": "resource is updated"}, 200
 
 @app.delete('/product/<int:id>/delete')
 def delete_product(id):
